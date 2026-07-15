@@ -1,0 +1,1660 @@
+:root {
+  --ink: #0a0c13;
+  --surface: #12151f;
+  --surface-2: #1a1e2c;
+  --surface-3: #202536;
+  --border: #262b3d;
+  --border-bright: #343b52;
+
+  --text: #edeff7;
+  --muted: #8b90a8;
+
+  --signal: #f4b740;
+  --signal-2: #ff9457;
+  --cool: #4fd9c0;
+  --purple: #7c6cff;
+  --purple-light: #a99eff;
+
+  --warn: #e8a33d;
+  --danger: #ff6b7a;
+
+  --radius: 14px;
+  --radius-lg: 18px;
+}
+
+/* =========================================================
+   LIGHT THEME
+========================================================= */
+
+.light {
+  --ink: #f8f6f1;
+  --surface: #ffffff;
+  --surface-2: #f1eee6;
+  --surface-3: #ebe7de;
+  --border: #e1dccf;
+  --border-bright: #d1cabb;
+
+  --text: #1b1d24;
+  --muted: #6b6f80;
+}
+
+/* =========================================================
+   GLOBAL RESET
+========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background-image:
+    radial-gradient(
+      circle at 15% 0%,
+      rgba(244, 183, 64, 0.08),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 85% 20%,
+      rgba(79, 217, 192, 0.06),
+      transparent 45%
+    );
+
+  background-attachment: fixed;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  margin: 0;
+}
+
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* =========================================================
+   MAIN SHELL
+========================================================= */
+
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* =========================================================
+   HERO / HEADER
+========================================================= */
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+
+  margin-bottom: 32px;
+
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.hero .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero .dot {
+  width: 10px;
+  height: 10px;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--signal),
+      var(--signal-2)
+    );
+
+  box-shadow:
+    0 0 14px rgba(244, 183, 64, 0.6);
+}
+
+.hero h1 {
+  font-size: 26px;
+  letter-spacing: -0.02em;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--text),
+      var(--muted)
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero .tag {
+  color: var(--muted);
+
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* =========================================================
+   NAVIGATION TABS
+========================================================= */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+
+  margin-bottom: 26px;
+
+  border-bottom: 1px solid var(--border);
+
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  background: none;
+  border: none;
+
+  color: var(--muted);
+
+  padding: 11px 16px;
+
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  cursor: pointer;
+
+  border-bottom: 2px solid transparent;
+
+  white-space: nowrap;
+
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tab.active {
+  color: var(--signal);
+  border-bottom-color: var(--signal);
+}
+
+.tab:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tab:hover:not(:disabled):not(.active) {
+  color: var(--text);
+}
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.card {
+  background:
+    linear-gradient(
+      180deg,
+      var(--surface),
+      var(--surface-2)
+    );
+
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius);
+
+  padding: 22px;
+  margin-bottom: 16px;
+
+  box-shadow:
+    0 8px 24px -12px rgba(0, 0, 0, 0.4);
+}
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(220px, 1fr));
+
+  gap: 14px;
+}
+
+/* =========================================================
+   FIELDS
+========================================================= */
+
+.field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+
+  background: var(--surface-2);
+
+  border: 1px solid var(--border);
+
+  color: var(--text);
+
+  border-radius: 9px;
+
+  padding: 10px 12px;
+
+  font-size: 14px;
+  font-family: inherit;
+
+  resize: vertical;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: none;
+
+  border-color: var(--signal);
+
+  box-shadow:
+    0 0 0 3px rgba(244, 183, 64, 0.12);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.btn {
+  background:
+    linear-gradient(
+      135deg,
+      var(--signal),
+      var(--signal-2)
+    );
+
+  color: #1a1200;
+
+  border: none;
+  border-radius: 9px;
+
+  padding: 11px 20px;
+
+  font-weight: 700;
+  font-size: 13.5px;
+
+  cursor: pointer;
+
+  font-family: "Space Grotesk", sans-serif;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    opacity 0.15s ease;
+
+  box-shadow:
+    0 4px 14px -4px rgba(244, 183, 64, 0.5);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 8px 20px -7px rgba(244, 183, 64, 0.7);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn.ghost {
+  background: transparent;
+
+  border: 1px solid var(--border);
+
+  color: var(--text);
+
+  box-shadow: none;
+}
+
+.btn.ghost:hover:not(:disabled) {
+  border-color: var(--signal);
+
+  background:
+    rgba(244, 183, 64, 0.06);
+}
+
+.btn.small {
+  padding: 7px 13px;
+  font-size: 12px;
+}
+
+/* =========================================================
+   DROPZONE
+========================================================= */
+
+.dropzone {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  min-height: 96px;
+
+  border: 1.5px dashed var(--border);
+
+  border-radius: 12px;
+
+  padding: 24px;
+
+  font-size: 13px;
+  color: var(--muted);
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.dropzone:hover {
+  border-color: var(--signal);
+  color: var(--signal);
+
+  background:
+    rgba(244, 183, 64, 0.05);
+}
+
+/* =========================================================
+   INVESTOR IMPORT ROWS
+========================================================= */
+
+.investor-row {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 11px 0;
+
+  border-bottom: 1px solid var(--border);
+
+  font-size: 13.5px;
+}
+
+.investor-row:last-child {
+  border-bottom: none;
+}
+
+.investor-row .meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+.filters {
+  display: flex;
+
+  gap: 12px;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 20px;
+
+  align-items: flex-end;
+}
+
+/* =========================================================
+   MATCH CARD
+========================================================= */
+
+.match-card {
+  position: relative;
+
+  display: flex;
+
+  gap: 18px;
+
+  background:
+    linear-gradient(
+      180deg,
+      var(--surface),
+      var(--surface-2)
+    );
+
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius);
+
+  padding: 20px;
+
+  margin-bottom: 14px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 8px 24px -14px rgba(0, 0, 0, 0.4);
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.match-card::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 0 auto 0 0;
+
+  width: 3px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffd166,
+      #ff7a59,
+      #7c6cff
+    );
+
+  opacity: 0.8;
+}
+
+.match-card:hover {
+  transform: translateY(-2px);
+
+  border-color:
+    rgba(244, 183, 64, 0.45);
+
+  box-shadow:
+    0 16px 38px -18px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(244, 183, 64, 0.08);
+}
+
+/* =========================================================
+   MATCH GAUGE
+========================================================= */
+
+.gauge {
+  position: relative;
+
+  width: 66px;
+  height: 66px;
+
+  flex-shrink: 0;
+}
+
+.gauge-num {
+  position: absolute;
+
+  inset: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  font-family: "JetBrains Mono", monospace;
+
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* =========================================================
+   MATCH CONTENT
+========================================================= */
+
+.match-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.match-top {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+}
+
+.subscores {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  margin: 10px 0;
+}
+
+.sub {
+  font-size: 11px;
+
+  padding: 3px 9px;
+
+  border-radius: 7px;
+
+  font-family: "JetBrains Mono", monospace;
+}
+
+.sub.good {
+  background:
+    rgba(244, 183, 64, 0.14);
+
+  color: var(--signal);
+}
+
+.sub.mid {
+  background:
+    rgba(139, 144, 168, 0.14);
+
+  color: var(--muted);
+}
+
+.sub.bad {
+  background:
+    rgba(255, 107, 122, 0.14);
+
+  color: var(--danger);
+}
+
+.rationale {
+  font-size: 13.5px;
+
+  color: var(--text);
+
+  line-height: 1.55;
+
+  margin-top: 8px;
+}
+
+.concerns {
+  font-size: 12.5px;
+
+  color: var(--danger);
+
+  margin-top: 6px;
+}
+
+.checkbox-label {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  font-size: 12.5px;
+
+  color: var(--muted);
+}
+
+.empty {
+  color: var(--muted);
+
+  font-size: 13.5px;
+
+  text-align: center;
+
+  padding: 34px 0;
+}
+
+/* =========================================================
+   MATCH ACTIONS
+========================================================= */
+
+.match-actions {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 14px;
+
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   INVESTOR AGENT LAUNCH BUTTON
+========================================================= */
+
+.agent-launch-btn {
+  border:
+    1px solid rgba(124, 108, 255, 0.55);
+
+  color: #f5f2ff;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(124, 108, 255, 0.22),
+      rgba(79, 217, 192, 0.12)
+    );
+
+  border-radius: 10px;
+
+  padding: 9px 13px;
+
+  cursor: pointer;
+
+  font-weight: 700;
+
+  box-shadow:
+    0 8px 24px -14px rgba(124, 108, 255, 0.9);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.agent-launch-btn:hover {
+  transform: translateY(-1px);
+
+  border-color: #9b8cff;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(124, 108, 255, 0.34),
+      rgba(79, 217, 192, 0.17)
+    );
+
+  box-shadow:
+    0 10px 28px -12px rgba(124, 108, 255, 0.9);
+}
+
+.agent-launch-icon {
+  color: #b8adff;
+
+  margin-right: 6px;
+}
+
+/* =========================================================
+   EMAIL CARDS
+========================================================= */
+
+.email-card {
+  background:
+    linear-gradient(
+      180deg,
+      var(--surface),
+      var(--surface-2)
+    );
+
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius);
+
+  padding: 20px;
+
+  margin-bottom: 14px;
+}
+
+.email-status {
+  font-size: 11px;
+
+  font-family: "JetBrains Mono", monospace;
+
+  text-transform: uppercase;
+
+  padding: 3px 10px;
+
+  border-radius: 7px;
+}
+
+.email-status.draft {
+  background:
+    rgba(79, 217, 192, 0.14);
+
+  color: var(--cool);
+}
+
+.email-status.sent {
+  background:
+    rgba(244, 183, 64, 0.14);
+
+  color: var(--signal);
+}
+
+.email-status.error {
+  background:
+    rgba(255, 107, 122, 0.14);
+
+  color: var(--danger);
+}
+
+.row-actions {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 10px;
+
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   NOTICES
+========================================================= */
+
+.notice {
+  font-size: 12.5px;
+
+  color: var(--muted);
+
+  background: var(--surface-2);
+
+  border: 1px dashed var(--border);
+
+  border-radius: 10px;
+
+  padding: 12px 14px;
+
+  margin-bottom: 16px;
+
+  line-height: 1.5;
+}
+
+.notice-error {
+  color: var(--danger);
+
+  border-color: var(--danger);
+
+  background:
+    rgba(255, 107, 122, 0.05);
+}
+
+.notice code {
+  font-family: "JetBrains Mono", monospace;
+
+  font-size: 11.5px;
+}
+
+/* =========================================================
+   INVESTOR INTELLIGENCE AGENT OVERLAY
+
+   IMPORTANT:
+   Transparent background.
+   No blur.
+   No dark shade.
+   Main website remains visible.
+========================================================= */
+
+.investor-agent-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  background: transparent;
+
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  z-index: 1000;
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   INVESTOR AGENT DRAWER
+========================================================= */
+
+.investor-agent-drawer {
+  position: fixed;
+
+  top: 0;
+  right: 0;
+
+  width: min(520px, 100vw);
+
+  height: 100vh;
+
+  padding: 24px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(124, 108, 255, 0.15),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 20% 40%,
+      rgba(79, 217, 192, 0.05),
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      #111521 0%,
+      #0e121c 100%
+    );
+
+  border-left:
+    1px solid rgba(124, 108, 255, 0.28);
+
+  box-shadow:
+    -18px 0 50px rgba(0, 0, 0, 0.35),
+    -1px 0 0 rgba(255, 255, 255, 0.03);
+
+  z-index: 1001;
+
+  pointer-events: auto;
+
+  animation:
+    agentSlide 0.28s ease-out;
+}
+
+/* =========================================================
+   DRAWER ANIMATION
+========================================================= */
+
+@keyframes agentSlide {
+  from {
+    transform: translateX(100%);
+    opacity: 0.4;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* =========================================================
+   AGENT SCROLLBAR
+========================================================= */
+
+.investor-agent-drawer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.investor-agent-drawer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.investor-agent-drawer::-webkit-scrollbar-thumb {
+  background:
+    rgba(124, 108, 255, 0.35);
+
+  border-radius: 10px;
+}
+
+.investor-agent-drawer::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(124, 108, 255, 0.65);
+}
+
+/* =========================================================
+   AGENT HEADER
+========================================================= */
+
+.investor-agent-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  align-items: flex-start;
+
+  margin-bottom: 18px;
+}
+
+.investor-agent-header h2 {
+  font-size: 24px;
+
+  margin-top: 5px;
+
+  line-height: 1.2;
+}
+
+.investor-agent-label,
+.investor-agent-section-label {
+  color: var(--purple-light);
+
+  font:
+    700 11px
+    "JetBrains Mono",
+    monospace;
+
+  letter-spacing: 0.11em;
+}
+
+.investor-agent-organization {
+  color: var(--muted);
+
+  margin-top: 4px;
+}
+
+/* =========================================================
+   AGENT CLOSE BUTTON
+========================================================= */
+
+.investor-agent-close {
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  border: 1px solid var(--border);
+
+  background:
+    rgba(255, 255, 255, 0.04);
+
+  color: var(--text);
+
+  font-size: 24px;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.investor-agent-close:hover {
+  transform: rotate(90deg);
+
+  background:
+    rgba(255, 107, 122, 0.12);
+
+  border-color: var(--danger);
+
+  color: var(--danger);
+}
+
+/* =========================================================
+   AGENT MATCH SCORE CARD
+========================================================= */
+
+.investor-agent-score-card {
+  border:
+    1px solid rgba(124, 108, 255, 0.35);
+
+  border-radius: 16px;
+
+  padding: 16px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(124, 108, 255, 0.15),
+      rgba(79, 217, 192, 0.07)
+    );
+
+  margin-bottom: 16px;
+
+  box-shadow:
+    0 12px 35px -25px rgba(124, 108, 255, 0.9);
+}
+
+.investor-agent-score-card > div {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+}
+
+.investor-agent-score-card span {
+  color: #b9b2ff;
+
+  font:
+    700 11px
+    "JetBrains Mono",
+    monospace;
+
+  letter-spacing: 0.08em;
+}
+
+.investor-agent-score-card strong {
+  font-size: 22px;
+
+  color: #ffd166;
+}
+
+.investor-agent-score-card p {
+  color: #c9ccda;
+
+  line-height: 1.55;
+
+  margin: 10px 0 0;
+
+  font-size: 13px;
+}
+
+/* =========================================================
+   AGENT WELCOME
+========================================================= */
+
+.investor-agent-welcome {
+  display: flex;
+
+  gap: 12px;
+
+  padding: 15px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 14px;
+
+  background:
+    rgba(255, 255, 255, 0.025);
+
+  margin-bottom: 16px;
+}
+
+.agent-orb {
+  width: 38px;
+  height: 38px;
+
+  flex: 0 0 38px;
+
+  border-radius: 12px;
+
+  display: grid;
+
+  place-items: center;
+
+  color: white;
+
+  background:
+    linear-gradient(
+      135deg,
+      #7c6cff,
+      #4fd9c0
+    );
+
+  box-shadow:
+    0 8px 24px rgba(124, 108, 255, 0.3);
+}
+
+.investor-agent-welcome h3 {
+  font-size: 15px;
+
+  margin-bottom: 5px;
+}
+
+.investor-agent-welcome p {
+  color: var(--muted);
+
+  font-size: 13px;
+
+  line-height: 1.5;
+
+  margin: 0;
+}
+
+/* =========================================================
+   QUICK QUESTIONS
+========================================================= */
+
+.investor-agent-suggestions {
+  display: grid;
+
+  gap: 8px;
+
+  margin-bottom: 18px;
+}
+
+.investor-agent-suggestions button {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  gap: 10px;
+
+  text-align: left;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+
+  border: 1px solid var(--border);
+
+  color: var(--text);
+
+  padding: 11px 12px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.investor-agent-suggestions button:hover:not(:disabled) {
+  border-color: #7c6cff;
+
+  background:
+    rgba(124, 108, 255, 0.1);
+
+  transform: translateX(2px);
+}
+
+.investor-agent-suggestions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   AGENT MESSAGES CONTAINER
+========================================================= */
+
+.investor-agent-messages {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 12px;
+
+  margin: 16px 0 150px;
+}
+
+/* =========================================================
+   AGENT MESSAGE
+========================================================= */
+
+.investor-agent-message {
+  max-width: 92%;
+
+  padding: 12px 14px;
+
+  border-radius: 14px;
+
+  line-height: 1.6;
+
+  font-size: 13.5px;
+
+  word-break: break-word;
+}
+
+.investor-agent-message.user {
+  align-self: flex-end;
+
+  background:
+    linear-gradient(
+      135deg,
+      #7c6cff,
+      #6254e8
+    );
+
+  color: white;
+
+  border-bottom-right-radius: 4px;
+
+  box-shadow:
+    0 8px 24px -14px rgba(124, 108, 255, 0.8);
+}
+
+.investor-agent-message.assistant {
+  align-self: flex-start;
+
+  background: #191d2a;
+
+  border: 1px solid #2c3245;
+
+  border-bottom-left-radius: 4px;
+
+  box-shadow:
+    0 8px 24px -18px rgba(0, 0, 0, 0.8);
+}
+
+.investor-agent-message.error {
+  border-color: var(--danger);
+
+  background:
+    rgba(255, 107, 122, 0.07);
+}
+
+/* =========================================================
+   MESSAGE ROLE
+========================================================= */
+
+.investor-agent-message-role {
+  font:
+    700 10px
+    "JetBrains Mono",
+    monospace;
+
+  letter-spacing: 0.08em;
+
+  opacity: 0.75;
+
+  margin-bottom: 5px;
+}
+
+/* =========================================================
+   MESSAGE CONTENT
+========================================================= */
+
+.investor-agent-message-content {
+  white-space: pre-wrap;
+
+  line-height: 1.7;
+
+  word-break: break-word;
+
+  overflow-wrap: anywhere;
+}
+
+.investor-agent-message-content strong {
+  color: #ffd166;
+
+  font-weight: 700;
+}
+
+.investor-agent-message-content p {
+  margin: 0 0 10px;
+}
+
+.investor-agent-message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.investor-agent-message-content ul,
+.investor-agent-message-content ol {
+  margin: 8px 0;
+
+  padding-left: 20px;
+}
+
+.investor-agent-message-content li {
+  margin-bottom: 6px;
+}
+
+/* =========================================================
+   AGENT THINKING ANIMATION
+========================================================= */
+
+.investor-agent-thinking {
+  display: flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  color: var(--muted);
+}
+
+.investor-agent-thinking i {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #9b8cff;
+
+  animation:
+    agentPulse 1s infinite alternate;
+}
+
+.investor-agent-thinking i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.investor-agent-thinking i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes agentPulse {
+  to {
+    opacity: 0.25;
+
+    transform: translateY(-3px);
+  }
+}
+
+/* =========================================================
+   AGENT INPUT AREA
+========================================================= */
+
+.investor-agent-input-area {
+  position: sticky;
+
+  bottom: 0;
+
+  padding: 18px 0 4px;
+
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      #10131d 18%,
+      #10131d 100%
+    );
+
+  z-index: 5;
+}
+
+.investor-agent-input-area textarea {
+  width: 100%;
+
+  background: #171b27;
+
+  color: var(--text);
+
+  border: 1px solid #343a50;
+
+  border-radius: 13px;
+
+  padding: 12px;
+
+  resize: none;
+
+  font: inherit;
+
+  line-height: 1.5;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.investor-agent-input-area textarea::placeholder {
+  color: #70758b;
+}
+
+.investor-agent-input-area textarea:focus {
+  outline: none;
+
+  border-color: #7c6cff;
+
+  box-shadow:
+    0 0 0 3px rgba(124, 108, 255, 0.14);
+}
+
+.investor-agent-input-area textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.investor-agent-input-footer {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 8px;
+
+  margin-top: 8px;
+}
+
+/* =========================================================
+   LIGHT MODE AGENT SUPPORT
+========================================================= */
+
+.light .investor-agent-drawer {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(124, 108, 255, 0.1),
+      transparent 35%
+    ),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f7f5f0 100%
+    );
+
+  border-left:
+    1px solid rgba(124, 108, 255, 0.18);
+
+  box-shadow:
+    -18px 0 50px rgba(0, 0, 0, 0.12);
+}
+
+.light .investor-agent-message.assistant {
+  background: #ffffff;
+
+  border-color: #ddd8ce;
+}
+
+.light .investor-agent-score-card p {
+  color: #555b6e;
+}
+
+.light .investor-agent-input-area {
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      #f7f5f0 18%,
+      #f7f5f0 100%
+    );
+}
+
+.light .investor-agent-input-area textarea {
+  background: #ffffff;
+
+  color: #1b1d24;
+
+  border-color: #d9d4ca;
+}
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--signal);
+
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+  .shell {
+    padding:
+      30px 18px 70px;
+  }
+
+  .filters {
+    display: grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .investor-agent-drawer {
+    width: min(500px, 92vw);
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+  .shell {
+    padding:
+      24px 14px 60px;
+  }
+
+  .hero {
+    align-items: flex-start;
+  }
+
+  .hero h1 {
+    font-size: 23px;
+  }
+
+  .tabs {
+    margin-left: -14px;
+    margin-right: -14px;
+
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .tab {
+    padding:
+      10px 12px;
+
+    font-size: 11px;
+  }
+
+  .card {
+    padding: 17px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters {
+    display: grid;
+
+    grid-template-columns: 1fr;
+  }
+
+  .match-card {
+    flex-direction: column;
+
+    padding: 17px;
+  }
+
+  .match-top {
+    flex-direction: column;
+  }
+
+  .investor-agent-drawer {
+    width: 100vw;
+
+    padding: 18px;
+
+    border-left: none;
+  }
+
+  .investor-agent-header h2 {
+    font-size: 21px;
+  }
+
+  .investor-agent-message {
+    max-width: 96%;
+  }
+
+  .investor-agent-input-footer {
+    flex-wrap: wrap;
+  }
+
+  .row-actions {
+    flex-direction: column;
+  }
+
+  .row-actions .btn {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+
+    animation-iteration-count: 1 !important;
+
+    transition-duration: 0.01ms !important;
+
+    scroll-behavior: auto !important;
+  }
+}
