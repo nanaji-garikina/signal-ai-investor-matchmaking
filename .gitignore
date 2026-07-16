@@ -73,3 +73,5 @@ Thumbs.db
 # Miscellaneous
 # ==========================================
 *.pem
+.vercel
+.env*

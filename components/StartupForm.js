@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { upload as uploadToBlob } from "@vercel/blob/client";
 import { Field } from "./UI";
 
 export default function StartupForm({
@@ -9,28 +10,71 @@ export default function StartupForm({
   onContinue,
 }) {
   const [status, setStatus] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const upload = async (file) => {
-    if (!file) return;
+    if (!file || isUploading) return;
+
+    setIsUploading(true);
 
     setStatus({
       state: "loading",
-      msg: `Reading ${file.name}…`,
+      msg: `Uploading ${file.name}…`,
     });
 
     try {
-      const fd = new FormData();
-
-      fd.append("file", file);
-      fd.append("type", "startup");
-
-      const res = await fetch("/api/extract", {
-        method: "POST",
-        body: fd,
+      /*
+       * STEP 1:
+       * Upload the file directly from the browser to Vercel Blob.
+       *
+       * This prevents the large original file from passing through
+       * the /api/extract Vercel Function request body.
+       */
+      const blob = await uploadToBlob(file.name, file, {
+        access: "private",
+        handleUploadUrl: "/api/blob-upload",
+        clientPayload: JSON.stringify({
+          type: "startup",
+          originalName: file.name,
+        }),
       });
 
-      // Read as text first because platform-level errors
-      // may not be returned as JSON.
+      if (!blob?.url) {
+        throw new Error(
+          "File upload completed, but no Blob URL was returned."
+        );
+      }
+
+      setStatus({
+        state: "loading",
+        msg: `${file.name} uploaded. Extracting startup information…`,
+      });
+
+      /*
+       * STEP 2:
+       * Send only the Blob reference to /api/extract.
+       *
+       * We do NOT send the complete large file again.
+       */
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          blobUrl: blob.url,
+          pathname: blob.pathname,
+          fileName: file.name,
+          contentType:
+            file.type || "application/octet-stream",
+          type: "startup",
+        }),
+      });
+
+      /*
+       * Read as text first because platform-level errors may return
+       * plain text or HTML instead of JSON.
+       */
       const responseText = await res.text();
 
       let data;
@@ -61,6 +105,10 @@ export default function StartupForm({
         );
       }
 
+      /*
+       * STEP 3:
+       * Fill the Startup Profile fields automatically.
+       */
       setStartup((prev) => {
         const next = { ...prev };
 
@@ -83,14 +131,19 @@ export default function StartupForm({
         msg: `Extracted fields from ${file.name} — review and edit below.`,
       });
     } catch (error) {
-      console.error("Startup document upload error:", error);
+      console.error(
+        "Startup document upload/extraction error:",
+        error
+      );
 
       setStatus({
         state: "error",
         msg:
-          error.message ||
-          "Couldn't read that file. Please try again.",
+          error?.message ||
+          "Couldn't upload or read that file. Please try again.",
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -120,16 +173,37 @@ export default function StartupForm({
         PPT/PPTX, export to PDF first.
       </p>
 
-      <label className="dropzone">
+      <label
+        className="dropzone"
+        style={{
+          cursor: isUploading ? "not-allowed" : "pointer",
+          opacity: isUploading ? 0.7 : 1,
+        }}
+      >
         <input
           type="file"
           accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
           style={{ display: "none" }}
-          onChange={(event) => upload(event.target.files?.[0])}
+          disabled={isUploading}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+
+            if (file) {
+              upload(file);
+            }
+
+            /*
+             * Reset input so the same file can be selected again
+             * after an error.
+             */
+            event.target.value = "";
+          }}
         />
 
         <span>
-          Click to upload a startup document
+          {isUploading
+            ? "Uploading and processing document…"
+            : "Click to upload a startup document"}
         </span>
       </label>
 
@@ -150,21 +224,21 @@ export default function StartupForm({
       >
         <Field label="Startup name">
           <input
-            value={startup.name}
+            value={startup.name || ""}
             onChange={set("name")}
           />
         </Field>
 
         <Field label="Founder(s)">
           <input
-            value={startup.founder}
+            value={startup.founder || ""}
             onChange={set("founder")}
           />
         </Field>
 
         <Field label="Industry / sector">
           <input
-            value={startup.industry}
+            value={startup.industry || ""}
             onChange={set("industry")}
             placeholder="e.g. climate, fintech, SaaS"
           />
@@ -172,7 +246,7 @@ export default function StartupForm({
 
         <Field label="Stage">
           <select
-            value={startup.stage}
+            value={startup.stage || "seed"}
             onChange={set("stage")}
           >
             {[
@@ -196,7 +270,7 @@ export default function StartupForm({
 
         <Field label="Business model">
           <input
-            value={startup.businessModel}
+            value={startup.businessModel || ""}
             onChange={set("businessModel")}
             placeholder="e.g. B2B SaaS subscription"
           />
@@ -204,7 +278,7 @@ export default function StartupForm({
 
         <Field label="Funding requirement">
           <input
-            value={startup.funding}
+            value={startup.funding || ""}
             onChange={set("funding")}
             placeholder="e.g. $1.5M"
           />
@@ -212,7 +286,7 @@ export default function StartupForm({
 
         <Field label="Geography">
           <input
-            value={startup.geography}
+            value={startup.geography || ""}
             onChange={set("geography")}
             placeholder="e.g. India, Southeast Asia"
           />
@@ -220,14 +294,14 @@ export default function StartupForm({
 
         <Field label="Target market">
           <input
-            value={startup.targetMarket}
+            value={startup.targetMarket || ""}
             onChange={set("targetMarket")}
           />
         </Field>
 
         <Field label="Technology">
           <input
-            value={startup.technology}
+            value={startup.technology || ""}
             onChange={set("technology")}
             placeholder="e.g. computer vision, IoT sensors"
           />
@@ -235,7 +309,7 @@ export default function StartupForm({
 
         <Field label="Website">
           <input
-            value={startup.website}
+            value={startup.website || ""}
             onChange={set("website")}
           />
         </Field>
@@ -245,7 +319,7 @@ export default function StartupForm({
         <Field label="Traction">
           <textarea
             rows={2}
-            value={startup.traction}
+            value={startup.traction || ""}
             onChange={set("traction")}
           />
         </Field>
@@ -255,7 +329,7 @@ export default function StartupForm({
         <Field label="Additional notes">
           <textarea
             rows={2}
-            value={startup.notes}
+            value={startup.notes || ""}
             onChange={set("notes")}
           />
         </Field>
@@ -264,7 +338,7 @@ export default function StartupForm({
       <div style={{ marginTop: 16 }}>
         <button
           className="btn"
-          disabled={!startup.name}
+          disabled={!startup.name || isUploading}
           onClick={onContinue}
         >
           Save & continue
