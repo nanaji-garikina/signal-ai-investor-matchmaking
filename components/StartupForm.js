@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { upload as uploadToBlob } from "@vercel/blob/client";
 import { Field } from "./UI";
+import { STAGE_ORDER } from "../lib/matching";
 
 export default function StartupForm({
   startup,
@@ -249,15 +250,7 @@ export default function StartupForm({
             value={startup.stage || "seed"}
             onChange={set("stage")}
           >
-            {[
-              "pre-seed",
-              "seed",
-              "series a",
-              "series b",
-              "series c",
-              "growth",
-              "late stage",
-            ].map((stage) => (
+            {STAGE_ORDER.map((stage) => (
               <option
                 key={stage}
                 value={stage}

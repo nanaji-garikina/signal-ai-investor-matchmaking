@@ -637,6 +637,16 @@ h3 {
   color: var(--danger);
 }
 
+.sub.unknown {
+  background: transparent;
+
+  color: var(--muted);
+
+  border: 1px dashed var(--border);
+
+  font-style: italic;
+}
+
 .rationale {
   font-size: 13.5px;
 

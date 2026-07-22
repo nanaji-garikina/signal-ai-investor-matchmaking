@@ -74,11 +74,38 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
         const isOpen = !!expanded[inv.id];
         return (
           <div className="match-card" key={inv.id}>
-            <Gauge score={m.overall} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Gauge score={m.overall} />
+              {m.dataCompleteness < 100 && (
+                <span
+                  title="Some fit dimensions couldn't be scored because the investor record is missing that data, so the overall score is based only on the dimensions we could compare."
+                  style={{ fontSize: 10, color: "var(--muted)", marginTop: 2, textAlign: "center", maxWidth: 66 }}
+                >
+                  {m.dataCompleteness}% data coverage
+                </span>
+              )}
+            </div>
             <div className="match-body">
               <div className="match-top">
                 <div>
                   <strong>{inv.name}</strong>{inv.organization ? ` — ${inv.organization}` : ""}
+                  {m.flags?.deadpooled && (
+                    <span
+                      title="This fund is marked as inactive/shut down in the source data. Outreach is not recommended."
+                      style={{
+                        marginLeft: 8,
+                        padding: "1px 7px",
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: "rgba(220,60,60,0.15)",
+                        color: "#ff6b6b",
+                        border: "1px solid rgba(220,60,60,0.4)",
+                      }}
+                    >
+                      ⚠ Possibly inactive fund
+                    </span>
+                  )}
                   <div style={{ color: "var(--muted)", fontSize: 12 }}>{[inv.email, inv.website, inv.linkedin].filter(Boolean).join(" · ")}</div>
                 </div>
                 <label className="checkbox-label">
@@ -87,9 +114,18 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
                 </label>
               </div>
               <div className="subscores">
-                {Object.entries(m.subs).map(([k, v]) => (
-                  <span key={k} className={`sub ${v >= 70 ? "good" : v >= 40 ? "mid" : "bad"}`}>{LABELS[k]}: {v}</span>
-                ))}
+                {Object.entries(m.subs).map(([k, v]) => {
+                  const isKnown = m.known?.[k];
+                  return (
+                    <span
+                      key={k}
+                      title={isKnown ? undefined : "No data available for this dimension - not counted in the overall score."}
+                      className={`sub ${!isKnown ? "unknown" : v >= 70 ? "good" : v >= 40 ? "mid" : "bad"}`}
+                    >
+                      {LABELS[k]}: {isKnown ? v : "no data"}
+                    </span>
+                  );
+                })}
               </div>
               {enr?.rationale && <div className="rationale">{enr.rationale}</div>}
               {!enr?.rationale && m.matched.length > 0 && (
