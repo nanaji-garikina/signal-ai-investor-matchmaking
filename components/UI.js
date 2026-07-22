@@ -13,7 +13,7 @@ export function Gauge({ score }) {
   const r = 27;
   const c = 2 * Math.PI * r;
   const offset = c - (score / 100) * c;
-  const color = score >= 70 ? "var(--signal)" : score >= 45 ? "var(--warn)" : "var(--danger)";
+  const color = score >= 70 ? "var(--success)" : score >= 45 ? "var(--warn)" : "var(--danger)";
   return (
     <div className="gauge">
       <svg width="66" height="66" viewBox="0 0 66 66">

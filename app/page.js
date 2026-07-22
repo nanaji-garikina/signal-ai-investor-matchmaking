@@ -8,7 +8,7 @@ import { emptyStartup } from "../lib/matching";
 
 export default function Page() {
   const [step, setStep] = useState(1);
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("light");
   const [startup, setStartup] = useState(emptyStartup);
   const [investors, setInvestors] = useState([]);
   const [selected, setSelected] = useState({});
@@ -22,20 +22,22 @@ export default function Page() {
 
   return (
     <div className={theme}>
-      <div className="shell">
-        <div className="hero">
+      <div className="topbar">
+        <div className="topbar-inner">
           <div className="brand">
             <span className="dot" />
             <h1>Signal</h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span className="tag">Founder ↔ Investor Matchmaking</span>
-            <button className="btn ghost small" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            <button className="btn ghost small on-topbar" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
               {theme === "dark" ? "☀ Light" : "● Dark"}
             </button>
           </div>
         </div>
+      </div>
 
+      <div className="shell">
         <div className="tabs">
           <button className={`tab ${step === 1 ? "active" : ""}`} onClick={() => setStep(1)}>01 · Startup</button>
           <button className={`tab ${step === 2 ? "active" : ""}`} onClick={() => setStep(2)}>02 · Investors</button>

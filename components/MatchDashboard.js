@@ -59,7 +59,7 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
         <Field label="Sector contains"><input value={filters.sector} onChange={(e) => setFilters({ ...filters, sector: e.target.value })} /></Field>
         <Field label="Stage contains"><input value={filters.stage} onChange={(e) => setFilters({ ...filters, stage: e.target.value })} /></Field>
         <Field label="Geography contains"><input value={filters.geo} onChange={(e) => setFilters({ ...filters, geo: e.target.value })} /></Field>
-        <button className="btn" onClick={enrichTop} disabled={loading}>{loading ? "Enriching…" : "Enrich top 10 with AI rationale"}</button>
+        <button className="btn btn-ai" onClick={enrichTop} disabled={loading}>{loading ? "Enriching…" : "✦ Enrich top 10 with AI rationale"}</button>
       </div>
 
       <div style={{ color: "var(--muted)", fontSize: 13, margin: "4px 0 12px" }}>
@@ -74,17 +74,7 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
         const isOpen = !!expanded[inv.id];
         return (
           <div className="match-card" key={inv.id}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Gauge score={m.overall} />
-              {m.dataCompleteness < 100 && (
-                <span
-                  title="Some fit dimensions couldn't be scored because the investor record is missing that data, so the overall score is based only on the dimensions we could compare."
-                  style={{ fontSize: 10, color: "var(--muted)", marginTop: 2, textAlign: "center", maxWidth: 66 }}
-                >
-                  {m.dataCompleteness}% data coverage
-                </span>
-              )}
-            </div>
+            <Gauge score={m.overall} />
             <div className="match-body">
               <div className="match-top">
                 <div>
@@ -114,18 +104,9 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
                 </label>
               </div>
               <div className="subscores">
-                {Object.entries(m.subs).map(([k, v]) => {
-                  const isKnown = m.known?.[k];
-                  return (
-                    <span
-                      key={k}
-                      title={isKnown ? undefined : "No data available for this dimension - not counted in the overall score."}
-                      className={`sub ${!isKnown ? "unknown" : v >= 70 ? "good" : v >= 40 ? "mid" : "bad"}`}
-                    >
-                      {LABELS[k]}: {isKnown ? v : "no data"}
-                    </span>
-                  );
-                })}
+                {Object.entries(m.subs).map(([k, v]) => (
+                  <span key={k} className={`sub ${v >= 70 ? "good" : v >= 40 ? "mid" : "bad"}`}>{LABELS[k]}: {v}</span>
+                ))}
               </div>
               {enr?.rationale && <div className="rationale">{enr.rationale}</div>}
               {!enr?.rationale && m.matched.length > 0 && (
@@ -145,14 +126,14 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
 
               <button
                 className="btn-link"
-                style={{ marginTop: 8, background: "none", border: "none", color: "var(--signal, #f0a830)", cursor: "pointer", padding: 0, fontSize: 13 }}
+                style={{ marginTop: 8, background: "none", border: "none", color: "var(--signal, #1c7ba0)", cursor: "pointer", padding: 0, fontSize: 13 }}
                 onClick={() => toggleExpand(inv.id)}
               >
                 {isOpen ? "Hide full profile ▲" : "Show full profile ▼"}
               </button>
 
               {isOpen && (
-                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--border, #333)", fontSize: 13, lineHeight: 1.6 }}>
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--border, #cfe8f5)", fontSize: 13, lineHeight: 1.6 }}>
                   {inv.stages && <div><strong>Stages:</strong> {inv.stages}</div>}
                   {inv.sectors && <div><strong>Sectors:</strong> {inv.sectors}</div>}
                   {inv.geography && <div><strong>Geography:</strong> {inv.geography}</div>}
@@ -175,7 +156,7 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
         </button>
       )}
 
-      <button className="btn" disabled={!canContinue} onClick={onContinue} style={{ marginTop: 16 }}>
+      <button className="btn btn-orange" disabled={!canContinue} onClick={onContinue} style={{ marginTop: 16 }}>
         Continue to outreach ({Object.values(selected).filter(Boolean).length} selected) →
       </button>
 

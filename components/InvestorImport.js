@@ -76,7 +76,7 @@ export default function InvestorImport({ investors, setInvestors, canContinue, o
             onChange={(e) => uploadFiles(e.target.files)} />
           <span>Click to upload one or more investor files</span>
         </label>
-        {fileStatus && <div className={`notice ${fileStatus.state === "error" ? "notice-error" : ""}`} style={{ marginTop: 10 }}>{fileStatus.msg}</div>}
+        {fileStatus && <div className={`notice ${fileStatus.state === "error" ? "notice-error" : fileStatus.state === "done" ? "notice-success" : ""}`} style={{ marginTop: 10 }}>{fileStatus.msg}</div>}
       </div>
 
       <div className="card">
@@ -86,7 +86,7 @@ export default function InvestorImport({ investors, setInvestors, canContinue, o
           value={bulkText} onChange={(e) => setBulkText(e.target.value)}
           placeholder={"Investor Name,Organization,Email,Stage,Sectors,Geography,Ticket Size,Thesis\nJane Doe,Acme Ventures,jane@acme.vc,Seed,Climate,Global,$250K-$1M,Backs early climate hardware"} />
         <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center" }}>
-          <button className="btn" onClick={importBulk}>Import rows</button>
+          <button className="btn btn-green" onClick={importBulk}>Import rows</button>
           {bulkMsg && <span style={{ fontSize: 12.5, color: "var(--muted)" }}>{bulkMsg}</span>}
         </div>
       </div>
@@ -105,7 +105,7 @@ export default function InvestorImport({ investors, setInvestors, canContinue, o
           <Field label="LinkedIn"><input value={draft.linkedin} onChange={set("linkedin")} /></Field>
         </div>
         <div style={{ marginTop: 12 }}><Field label="Investment thesis / notes"><textarea rows={2} value={draft.thesis} onChange={set("thesis")} /></Field></div>
-        <div style={{ marginTop: 12 }}><button className="btn" onClick={addInvestor}>Add investor</button></div>
+        <div style={{ marginTop: 12 }}><button className="btn btn-green" onClick={addInvestor}>Add investor</button></div>
       </div>
 
       <div className="card">
@@ -132,7 +132,7 @@ export default function InvestorImport({ investors, setInvestors, canContinue, o
         )}
       </div>
 
-      <button className="btn" disabled={!canContinue} onClick={onContinue}>See matches →</button>
+      <button className="btn btn-green" disabled={!canContinue} onClick={onContinue}>See matches →</button>
     </>
   );
 }

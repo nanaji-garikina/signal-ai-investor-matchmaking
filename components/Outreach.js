@@ -230,13 +230,13 @@ export default function Outreach({
       </div>
 
       <button
-        className="btn"
+        className="btn btn-ai"
         onClick={generateEmails}
         disabled={loading}
       >
         {loading
           ? "Generating personalized drafts…"
-          : "Generate personalized email drafts"}
+          : "✦ Generate personalized email drafts"}
       </button>
 
       <div style={{ marginTop: 18 }}>
@@ -325,10 +325,11 @@ export default function Outreach({
                           onClick={() =>
                             regenerateEmail(inv)
                           }
+                          style={{ color: "var(--purple-2)", borderColor: "var(--purple-light)" }}
                         >
                           {generatingId === inv.id
                             ? "Regenerating…"
-                            : "Regenerate"}
+                            : "✦ Regenerate"}
                         </button>
 
                         <button
@@ -347,7 +348,7 @@ export default function Outreach({
 
                     {em.status === "opened" && (
                       <button
-                        className="btn small"
+                        className="btn small btn-green"
                         onClick={() =>
                           markAsSent(inv)
                         }
