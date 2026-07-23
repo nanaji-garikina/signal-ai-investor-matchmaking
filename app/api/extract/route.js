@@ -9,6 +9,15 @@ import {
 import { get } from "@vercel/blob";
 import * as XLSX from "xlsx";
 import mammoth from "mammoth";
+// IMPORTANT: this import must come before `import { PDFParse } from "pdf-parse"`.
+// pdf-parse wraps pdfjs-dist, which tries to access DOMMatrix/ImageData/Path2D
+// (browser globals) the moment its module evaluates - not when a function is
+// called. pdf-parse/worker sets up @napi-rs/canvas's polyfills for those
+// globals first. Skipping this (or importing it after pdf-parse) is what
+// causes "DOMMatrix is not defined" crashes at module-load time - this can
+// pass in local dev depending on Node version/module cache order, then still
+// fail once deployed to Vercel's serverless runtime.
+import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 
 export const runtime = "nodejs";
@@ -39,7 +48,7 @@ async function extractPdfTextLocally(buf) {
   let parser;
 
   try {
-    parser = new PDFParse({ data: buf });
+    parser = new PDFParse({ data: buf, CanvasFactory });
     const result = await parser.getText();
     return (result?.text || "").trim();
   } catch (error) {
