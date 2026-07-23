@@ -1,4 +1,5 @@
 import { callGemini } from "../../../lib/gemini";
+import { callGroq } from "../../../lib/groq";
 import {
   emptyInvestor,
   genId,
@@ -8,8 +9,78 @@ import {
 import { get } from "@vercel/blob";
 import * as XLSX from "xlsx";
 import mammoth from "mammoth";
+import { PDFParse } from "pdf-parse";
 
 export const runtime = "nodejs";
+
+// Inline binary attachments (PDF/image sent to Gemini for native vision
+// reading) are base64-encoded, which inflates size by ~33%. Gemini's
+// inline-data request limit is ~20MB, so we cap the raw file size well
+// under that to fail fast with a clear message instead of a slow timeout.
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15MB
+
+// If local PDF text extraction pulls out fewer characters than this, the
+// PDF is probably scanned/image-based (no real text layer) rather than
+// something extraction just failed on - falls back to sending it to
+// Gemini as a binary attachment for vision-based reading instead.
+const MIN_EXTRACTED_PDF_CHARS = 150;
+
+/*
+ * Try to pull text out of a PDF locally (fast, reliable, works
+ * regardless of file size) before ever involving an AI call. This is
+ * what actually fixes large pitch decks failing/timing out - previously
+ * every PDF, regardless of size, was base64-encoded and sent to Gemini
+ * to read visually, which is slow and prone to timing out on bigger
+ * files. Most pitch decks (even PDFs exported from Keynote/PPT/Canva)
+ * have a real text layer, so this now handles the vast majority of
+ * uploads without an AI call being involved in "reading" the file at all.
+ */
+async function extractPdfTextLocally(buf) {
+  let parser;
+
+  try {
+    parser = new PDFParse({ data: buf });
+    const result = await parser.getText();
+    return (result?.text || "").trim();
+  } catch (error) {
+    console.error("Local PDF text extraction failed:", error?.message || error);
+    return "";
+  } finally {
+    if (parser) {
+      try {
+        await parser.destroy();
+      } catch {
+        // Ignore cleanup errors.
+      }
+    }
+  }
+}
+
+/*
+ * Calls Gemini first, then falls back to Groq if Gemini fails - same
+ * pattern used by the Investor Agent. Only usable when there's no binary
+ * attachment (Groq's free-tier model here is text-only), which covers
+ * the PDF-with-text-layer path above plus DOCX/XLSX/CSV/TXT.
+ */
+async function callAIWithFallback(prompt, attachment, responseType) {
+  try {
+    const result = await callGemini(prompt, attachment, 4, responseType);
+    if (!result?.trim()) {
+      throw new Error("Gemini returned an empty response.");
+    }
+    return result.trim();
+  } catch (geminiError) {
+    console.error("Gemini call failed:", geminiError?.message || geminiError);
+
+    if (attachment) {
+      // Groq can't read binary attachments - nothing to fall back to.
+      throw geminiError;
+    }
+
+    console.warn("Falling back to Groq...");
+    return await callGroq(prompt, { jsonMode: responseType === "json" });
+  }
+}
 
 const STARTUP_KEYS = [
   "name",
@@ -294,14 +365,50 @@ export async function POST(req) {
           wb.Sheets[wb.SheetNames[0]]
         );
     } else if (e === "pdf") {
-      attachment = {
-        kind: "document",
-        mediaType: "application/pdf",
-        data: buf.toString("base64"),
-      };
+      const localText = await extractPdfTextLocally(buf);
+
+      if (localText.length >= MIN_EXTRACTED_PDF_CHARS) {
+        // Normal case: PDF has a real text layer (true for the vast
+        // majority of pitch decks, including ones exported from
+        // Keynote/PowerPoint/Canva/Google Slides). No AI call is
+        // involved in "reading" the file, so file size and Gemini
+        // demand/timeouts stop being a factor for extraction quality.
+        textContent = localText;
+      } else if (buf.length > MAX_ATTACHMENT_BYTES) {
+        // No usable text layer AND too large to safely send as a binary
+        // attachment. Fail fast with a clear message instead of a slow
+        // timeout.
+        return Response.json(
+          {
+            error:
+              "This PDF appears to be scanned/image-based (no selectable text) and is too large to process. " +
+              "Try exporting a smaller version, or use a PDF with selectable text.",
+          },
+          { status: 400 }
+        );
+      } else {
+        // Likely a scanned/image-only deck with no text layer - fall
+        // back to sending it to Gemini for native vision reading, same
+        // as before, but now only for the smaller minority of files
+        // that actually need it.
+        attachment = {
+          kind: "document",
+          mediaType: "application/pdf",
+          data: buf.toString("base64"),
+        };
+      }
     } else if (
       ["jpg", "jpeg", "png"].includes(e)
     ) {
+      if (buf.length > MAX_ATTACHMENT_BYTES) {
+        return Response.json(
+          {
+            error: "This image is too large to process. Please upload a smaller file (under 15MB).",
+          },
+          { status: 400 }
+        );
+      }
+
       attachment = {
         kind: "image",
         mediaType:
@@ -356,9 +463,10 @@ ${textContent.slice(0, 12000)}`
 }
       `.trim();
 
-      const raw = await callGemini(
+      const raw = await callAIWithFallback(
         prompt,
-        attachment
+        attachment,
+        "json"
       );
 
       let parsed;
@@ -425,9 +533,10 @@ ${textContent.slice(0, 12000)}`
 }
     `.trim();
 
-    const raw = await callGemini(
+    const raw = await callAIWithFallback(
       prompt,
-      attachment
+      attachment,
+      "json"
     );
 
     let parsed;

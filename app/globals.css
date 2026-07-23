@@ -1440,6 +1440,85 @@ h3 {
 .investor-agent-message-content li {
   margin-bottom: 6px;
 }
+.investor-agent-message-content .agent-heading {
+  font: 700 11px "JetBrains Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f5972;
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e3e7ee;
+}
+
+.investor-agent-message-content .agent-heading:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.investor-agent-message-content .agent-list {
+  margin: 4px 0 14px;
+  padding-left: 4px;
+  list-style: none;
+}
+
+.investor-agent-message-content .agent-list.ordered {
+  counter-reset: agent-list-counter;
+}
+
+.investor-agent-message-content .agent-list li {
+  position: relative;
+  padding-left: 18px;
+  margin-bottom: 7px;
+}
+
+.investor-agent-message-content .agent-list:not(.ordered) li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8d5ce9;
+}
+
+.investor-agent-message-content .agent-list.ordered li {
+  counter-increment: agent-list-counter;
+}
+
+.investor-agent-message-content .agent-list.ordered li::before {
+  content: counter(agent-list-counter) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: 700 11.5px "JetBrains Mono", monospace;
+  color: #8d5ce9;
+}
+
+.investor-agent-message-content .agent-score-chip {
+  display: inline-block;
+  font: 700 11px "JetBrains Mono", monospace;
+  padding: 1px 7px;
+  margin: 0 1px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.investor-agent-message-content .agent-score-chip.good {
+  background: rgba(20, 168, 119, 0.14);
+  color: var(--success);
+}
+
+.investor-agent-message-content .agent-score-chip.mid {
+  background: rgba(242, 145, 40, 0.14);
+  color: var(--warn);
+}
+
+.investor-agent-message-content .agent-score-chip.bad {
+  background: rgba(239, 67, 96, 0.14);
+  color: var(--danger);
+}
 
 /* =========================================================
    AGENT THINKING ANIMATION

@@ -1,6 +1,170 @@
 "use client";
 import { useEffect, useState } from "react";
 
+/* ============================================================================
+ * AGENT REPLY RENDERER
+ * ----------------------------------------------------------------------------
+ * The AI prompt (see app/api/investor-agent/route.js RESPONSE FORMAT
+ * section) asks the model for "## " headings, "**bold**", bullet/numbered
+ * lists, and inline scores like "Geography: 100/100". This turns that into
+ * real, styled JSX instead of showing raw markdown characters:
+ *   - "## Heading"      -> uppercase section heading (.agent-heading)
+ *   - "**bold**"        -> <strong>
+ *   - "* item" / "- item" -> a real bullet list
+ *   - "1. item"         -> a real numbered list
+ *   - "Label: 82/100"   -> a colored score chip, using the same
+ *                          good/mid/bad thresholds as the match Gauge
+ *                          in components/UI.js
+ *   - consecutive plain lines with no blank line between them are grouped
+ *     into a single paragraph, instead of one <p> per line
+ * ==========================================================================*/
+
+// Same thresholds as Gauge() in components/UI.js, so a score mentioned in
+// an agent reply is colored consistently with the rest of the app.
+function scoreTier(value) {
+  if (value >= 70) return "good";
+  if (value >= 45) return "mid";
+  return "bad";
+}
+
+// Matches "**bold**" and "Label words: NN/100" in a single pass so both can
+// be replaced without one clobbering the other.
+const INLINE_PATTERN = /(\*\*[^*]{1,300}?\*\*)|([A-Za-z][\w() /&+-]{1,40}?:\s*\d{1,3}\/100)/g;
+
+function renderInline(text, keyPrefix) {
+  const nodes = [];
+  let lastIndex = 0;
+  let n = 0;
+  let match;
+
+  INLINE_PATTERN.lastIndex = 0;
+  while ((match = INLINE_PATTERN.exec(text))) {
+    if (match.index > lastIndex) {
+      nodes.push(<span key={`${keyPrefix}-t-${n++}`}>{text.slice(lastIndex, match.index)}</span>);
+    }
+
+    if (match[1]) {
+      // **bold**
+      nodes.push(<strong key={`${keyPrefix}-b-${n++}`}>{match[1].slice(2, -2)}</strong>);
+    } else if (match[2]) {
+      // "Label: NN/100" -> colored chip
+      const raw = match[2];
+      const colonIdx = raw.lastIndexOf(":");
+      const label = raw.slice(0, colonIdx).trim();
+      const valueMatch = raw.slice(colonIdx + 1).match(/(\d{1,3})\/100/);
+      const value = valueMatch ? Math.min(100, parseInt(valueMatch[1], 10)) : null;
+
+      if (value !== null) {
+        nodes.push(
+          <span className={`agent-score-chip ${scoreTier(value)}`} key={`${keyPrefix}-s-${n++}`}>
+            {label}: {value}/100
+          </span>
+        );
+      } else {
+        nodes.push(<span key={`${keyPrefix}-s-${n++}`}>{raw}</span>);
+      }
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(<span key={`${keyPrefix}-t-${n++}`}>{text.slice(lastIndex)}</span>);
+  }
+
+  return nodes;
+}
+
+function renderAgentContent(content) {
+  if (!content) return null;
+
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+
+  let paraBuffer = [];
+  let listBuffer = [];
+  let listType = null; // "ul" | "ol"
+
+  const flushParagraph = (key) => {
+    if (!paraBuffer.length) return;
+    const joined = paraBuffer.join(" ");
+    blocks.push(<p key={`p-${key}`}>{renderInline(joined, `p-${key}`)}</p>);
+    paraBuffer = [];
+  };
+
+  const flushList = (key) => {
+    if (!listBuffer.length) return;
+    const items = listBuffer;
+    const isOrdered = listType === "ol";
+    listBuffer = [];
+    listType = null;
+
+    blocks.push(
+      isOrdered ? (
+        <ol className="agent-list ordered" key={`list-${key}`}>
+          {items.map((item, i) => (
+            <li key={i}>{renderInline(item, `oli-${key}-${i}`)}</li>
+          ))}
+        </ol>
+      ) : (
+        <ul className="agent-list" key={`list-${key}`}>
+          {items.map((item, i) => (
+            <li key={i}>{renderInline(item, `uli-${key}-${i}`)}</li>
+          ))}
+        </ul>
+      )
+    );
+  };
+
+  lines.forEach((rawLine, idx) => {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushParagraph(idx);
+      flushList(idx);
+      return;
+    }
+
+    const headingMatch = line.match(/^#{1,6}\s+(.*)$/);
+    if (headingMatch) {
+      flushParagraph(idx);
+      flushList(idx);
+      blocks.push(
+        <h4 className="agent-heading" key={`h-${idx}`}>
+          {headingMatch[1].replace(/\*\*/g, "")}
+        </h4>
+      );
+      return;
+    }
+
+    const bulletMatch = line.match(/^[*-]\s+(.*)$/);
+    if (bulletMatch) {
+      flushParagraph(idx);
+      if (listType && listType !== "ul") flushList(idx);
+      listType = "ul";
+      listBuffer.push(bulletMatch[1]);
+      return;
+    }
+
+    const numberedMatch = line.match(/^\d+[.)]\s+(.*)$/);
+    if (numberedMatch) {
+      flushParagraph(idx);
+      if (listType && listType !== "ol") flushList(idx);
+      listType = "ol";
+      listBuffer.push(numberedMatch[1]);
+      return;
+    }
+
+    flushList(idx);
+    paraBuffer.push(line);
+  });
+
+  flushParagraph("end");
+  flushList("end");
+
+  return blocks;
+}
+
 const SUGGESTED_QUESTIONS = [
   "Why is this investor a good match for my startup?",
   "What are the biggest weaknesses or risks in this match?",
@@ -101,7 +265,9 @@ export default function InvestorAgent({ investor, startup, match, enrichment, on
           {messages.map((m, i) => (
             <div key={i} className={`investor-agent-message ${m.role} ${m.error ? "error" : ""}`}>
               <div className="investor-agent-message-role">{m.role === "user" ? "YOU" : "✦ AGENT"}</div>
-              <div className="investor-agent-message-content">{m.content}</div>
+              <div className="investor-agent-message-content">
+                {m.role === "assistant" && !m.error ? renderAgentContent(m.content) : m.content}
+              </div>
             </div>
           ))}
           {loading && <div className="investor-agent-message assistant"><div className="investor-agent-message-role">✦ AGENT</div><div className="investor-agent-thinking"><i></i><i></i><i></i> Analyzing this investor...</div></div>}

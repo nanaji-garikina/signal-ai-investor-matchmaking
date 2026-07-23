@@ -1,4 +1,5 @@
 import { callGemini } from "../../../lib/gemini";
+import { callGroq } from "../../../lib/groq";
 export const runtime = "nodejs";
 
 /* ============================================================================
@@ -9,6 +10,7 @@ export const runtime = "nodejs";
 // and `computeMatch`), not a generic guess. See answerFromInvestorData for
 // the exact field names used.
 const CATEGORY = {
+  OUTREACH_STRATEGY: "OUTREACH_STRATEGY",
   SECTOR: "SECTOR",
   STAGE: "STAGE",
   GEOGRAPHY: "GEOGRAPHY", // also covers location/country/city questions - this dataset only has one geography string
@@ -36,41 +38,81 @@ const SOURCE = {
   PROFILE_PLUS_AI: "Investor Profile + AI Analysis",
 };
 
+// Categories that can never be fully answered from local data alone - they
+// always need model reasoning, even if some sub-parts overlap with a local
+// field. If any of these appear alongside other categories in the same
+// question, the whole question is routed to the AI so the answer reads as
+// one coherent response instead of a patchwork of local lookups.
+const AI_REQUIRED_CATEGORIES = new Set([
+  CATEGORY.OUTREACH_STRATEGY,
+  CATEGORY.COMPARISON,
+  CATEGORY.GENERAL_KNOWLEDGE,
+  CATEGORY.RECENT_NEWS,
+]);
+
 /* ============================================================================
  * STEP 1 - QUESTION CLASSIFIER
- * Order matters: broader intents (comparison / news / general knowledge)
- * are checked before narrow field lookups so they aren't shadowed by a
- * stray keyword (e.g. "compare geography" should be a COMPARISON, not a
- * GEOGRAPHY lookup).
+ * Returns ALL matching categories (not just the first) so multi-intent
+ * questions like "what's their stage and geography?" or "why is this a good
+ * match and how should I approach them?" get handled properly instead of
+ * silently dropping everything after the first keyword hit.
+ *
+ * Order still matters for two things: (1) which category is treated as
+ * "primary" when picking a Gemini prompt template, and (2) tie-breaking
+ * broad intents (outreach / comparison / news / general knowledge) ahead of
+ * narrow field lookups so a stray keyword doesn't shadow the real intent.
  * ==========================================================================*/
-function classifyQuestion(question) {
+const CLASSIFIER_RULES = [
+  // Outreach/approach questions are checked first and are deliberately
+  // broad - this is one of the most common and highest-value question
+  // types founders ask, and it must never be shadowed by EMAIL ("email"),
+  // STARTUP_FIT ("should we reach out"), etc. matching first.
+  {
+    category: CATEGORY.OUTREACH_STRATEGY,
+    pattern:
+      /\boutreach|approach (this|the|an|my) investor|how (should|do|can|would) (i|we) (approach|reach out|pitch|contact|email)|reach out to (this|the|them)|cold email|intro(duction)? (email|message)|talking points|what should (i|we) say|opening line|first (email|message|touch)|draft (an? )?email|write (an? )?email|how to pitch/,
+  },
+  { category: CATEGORY.COMPARISON, pattern: /\b(compare|comparison|difference|differ|better than|versus|\bvs\.?\b)\b/ },
+  { category: CATEGORY.RECENT_NEWS, pattern: /\b(recent|latest|current|up.to.date|these days|lately)\b[^.?!]{0,25}\b(invest\w*|portfolio|news|funding|deal|activity|doing)\b/ },
+  { category: CATEGORY.GENERAL_KNOWLEDGE, pattern: /\b(what is|what's|define|explain|meaning of)\b.*\b(venture capital|\bvc\b|deep\s?tech|safe note|series [a-e]|seed round|cap table|term sheet|due diligence|valuation|convertible note|pre-?seed)\b/ },
+  { category: CATEGORY.STAGE, pattern: /\bstage(s)?\b/ },
+  { category: CATEGORY.SECTOR, pattern: /\bsector(s)?|industr(y|ies)|vertical(s)?\b/ },
+  // This dataset has a single free-text `geography` field, no separate
+  // country/city/location fields - route all of those here.
+  { category: CATEGORY.GEOGRAPHY, pattern: /\bgeograph(y|ies)|region(s)?|location|countr(y|ies)|\bcit(y|ies)\b/ },
+  { category: CATEGORY.WEBSITE, pattern: /\bwebsite|site url|homepage\b/ },
+  { category: CATEGORY.LINKEDIN, pattern: /\blinkedin\b/ },
+  { category: CATEGORY.EMAIL, pattern: /\bemail\b/ },
+  { category: CATEGORY.ORGANIZATION, pattern: /\borgani[sz]ation|firm name|fund name|company name\b/ },
+  { category: CATEGORY.TICKET_SIZE, pattern: /\bticket size|cheque size|check size|investment size|funding amount|how much (do|does|would).*(invest|write)\b/ },
+  { category: CATEGORY.PORTFOLIO, pattern: /\bportfolio|invested in|portfolio compan(y|ies)\b/ },
+  // `thesis` also serves "investment philosophy" questions - same field.
+  { category: CATEGORY.THESIS, pattern: /\bthesis|investment philosophy|investing philosophy|approach to investing\b/ },
+  { category: CATEGORY.BUSINESS_MODEL, pattern: /\bbusiness model\b/ },
+  { category: CATEGORY.TECHNOLOGY, pattern: /\btechnology|tech stack|deep ?tech focus\b/ },
+  { category: CATEGORY.HISTORY, pattern: /\bhistory|past investments|track record|previously invested|founder(s)?\b/ },
+  { category: CATEGORY.STARTUP_FIT, pattern: /\bmatch score|good (match|fit)|why (is|does) this|startup fit|would you recommend|should (i|we) reach out|strength|weakness|risk|gap\b/ },
+];
+
+function classifyQuestions(question) {
   const q = (question || "").toLowerCase();
 
-  const rules = [
-    { category: CATEGORY.COMPARISON, pattern: /\b(compare|comparison|difference|differ|better than|versus|\bvs\.?\b)\b/ },
-    { category: CATEGORY.RECENT_NEWS, pattern: /\b(recent|latest|current|up.to.date|these days|lately)\b[^.?!]{0,25}\b(invest\w*|portfolio|news|funding|deal|activity|doing)\b/ },
-    { category: CATEGORY.GENERAL_KNOWLEDGE, pattern: /\b(what is|what's|define|explain|meaning of)\b.*\b(venture capital|\bvc\b|deep\s?tech|safe note|series [a-e]|seed round|cap table|term sheet|due diligence|valuation|convertible note|pre-?seed)\b/ },
-    { category: CATEGORY.STAGE, pattern: /\bstage(s)?\b/ },
-    { category: CATEGORY.SECTOR, pattern: /\bsector(s)?|industr(y|ies)|vertical(s)?\b/ },
-    // This dataset has a single free-text `geography` field, no separate
-    // country/city/location fields - route all of those here.
-    { category: CATEGORY.GEOGRAPHY, pattern: /\bgeograph(y|ies)|region(s)?|location|countr(y|ies)|\bcit(y|ies)\b/ },
-    { category: CATEGORY.WEBSITE, pattern: /\bwebsite|site url|homepage\b/ },
-    { category: CATEGORY.LINKEDIN, pattern: /\blinkedin\b/ },
-    { category: CATEGORY.EMAIL, pattern: /\bemail\b/ },
-    { category: CATEGORY.ORGANIZATION, pattern: /\borgani[sz]ation|firm name|fund name|company name\b/ },
-    { category: CATEGORY.TICKET_SIZE, pattern: /\bticket size|cheque size|check size|investment size|funding amount|how much (do|does|would).*(invest|write)\b/ },
-    { category: CATEGORY.PORTFOLIO, pattern: /\bportfolio|invested in|portfolio compan(y|ies)\b/ },
-    // `thesis` also serves "investment philosophy" questions - same field.
-    { category: CATEGORY.THESIS, pattern: /\bthesis|investment philosophy|investing philosophy|approach to investing\b/ },
-    { category: CATEGORY.BUSINESS_MODEL, pattern: /\bbusiness model\b/ },
-    { category: CATEGORY.TECHNOLOGY, pattern: /\btechnology|tech stack|deep ?tech focus\b/ },
-    { category: CATEGORY.HISTORY, pattern: /\bhistory|past investments|track record|previously invested|founder(s)?\b/ },
-    { category: CATEGORY.STARTUP_FIT, pattern: /\bmatch score|good (match|fit)|why (is|does) this|startup fit|would you recommend|should (i|we) reach out|strength|weakness|risk|gap\b/ },
-  ];
+  const hits = CLASSIFIER_RULES.filter((r) => r.pattern.test(q)).map((r) => r.category);
 
-  const hit = rules.find((r) => r.pattern.test(q));
-  return hit ? hit.category : CATEGORY.UNKNOWN;
+  // De-dupe while preserving rule order.
+  const unique = [...new Set(hits)];
+
+  return unique.length > 0 ? unique : [CATEGORY.UNKNOWN];
+}
+
+// Picks which category's Gemini prompt template to use when a question
+// spans multiple categories. AI-required categories (outreach, comparison,
+// etc.) always take priority since they represent the user's real intent;
+// a stray "gap" or "email" keyword shouldn't demote an outreach question to
+// a generic supplemental-lookup prompt.
+function primaryCategory(categories) {
+  const aiRequired = categories.find((c) => AI_REQUIRED_CATEGORIES.has(c));
+  return aiRequired || categories[0] || CATEGORY.UNKNOWN;
 }
 
 /* ============================================================================
@@ -177,7 +219,7 @@ function answerFromInvestorData(investor, startup, match, enrichment, question, 
     // BUSINESS_MODEL, TECHNOLOGY, and HISTORY have no dedicated investor
     // field in this dataset (only the startup profile has businessModel /
     // technology, and there's no track-record field at all). Returning
-    // NOT_FOUND routes these to Gemini, which still gets the full investor
+    // NOT_FOUND routes these to the AI, which still gets the full investor
     // object (thesis, sectors, portfolio) as grounding context.
     case CATEGORY.BUSINESS_MODEL:
     case CATEGORY.TECHNOLOGY:
@@ -197,13 +239,15 @@ function answerFromInvestorData(investor, startup, match, enrichment, question, 
       return localAnswer(text);
     }
 
+    // OUTREACH_STRATEGY, COMPARISON, GENERAL_KNOWLEDGE, and RECENT_NEWS are
+    // never answered locally - see AI_REQUIRED_CATEGORIES.
     default:
       return NOT_FOUND;
   }
 }
 
 /* ============================================================================
- * STEP 5 - CONVERSATION MEMORY
+ * STEP 3 - CONVERSATION MEMORY
  * Keeps a longer, more useful window of context so follow-ups like
  * "what about geography?" or "explain more" still resolve correctly,
  * while avoiding unbounded prompt growth on very long threads.
@@ -222,18 +266,27 @@ function buildConversationContext(messages) {
 }
 
 /* ============================================================================
- * STEP 4 / 6 / 7 / 8 - GEMINI PROMPT BUILDER
- * Builds one grounded prompt for every Gemini-routed case (supplemental
- * lookups, comparisons, general knowledge, recent-news requests).
+ * STEP 4 - AI PROMPT BUILDER
+ * Builds one grounded prompt for every AI-routed case (supplemental
+ * lookups, comparisons, general knowledge, recent-news requests, outreach
+ * strategy). Used for both the primary provider (Gemini) and the fallback
+ * provider (Groq) so answer style stays consistent regardless of which
+ * one actually served the request.
  * ==========================================================================*/
-function buildGeminiPrompt({ startup, investor, match, enrichment, conversation, question, category }) {
+function buildAIPrompt({ startup, investor, match, enrichment, conversation, question, category, knownLocally }) {
   const specialInstructions = {
+    [CATEGORY.OUTREACH_STRATEGY]: `This is an OUTREACH STRATEGY question - the founder wants to know how to approach this investor. Structure the answer around: (1) one or two sentences on whether/why this investor is worth prioritizing, grounded in the match data, (2) the two or three strongest angles to lead with, each tied to a specific match strength or thesis overlap, (3) how to briefly acknowledge any real gaps without dwelling on them, (4) a suggested subject line for the first email, (5) a short suggested opening line or hook for that email. Keep every point concrete and specific to this startup-investor pair - never give generic "do your research and be concise" fundraising advice.`,
     [CATEGORY.COMPARISON]: `This is a COMPARISON question. Compare ${investor?.name || "this investor"} against whatever else the user named, using the supplied investor/match/startup data for known facts and general knowledge for the other party. Clearly mark anything not backed by local data as general knowledge.`,
     [CATEGORY.GENERAL_KNOWLEDGE]: `This is a GENERAL KNOWLEDGE question unrelated to the specific investor record. Answer using general venture capital knowledge. Do not search the investor data for this.`,
     [CATEGORY.RECENT_NEWS]: `This asks about RECENT/LIVE information (news, latest investments, current portfolio). Begin the answer with: "This information is not available in the uploaded investor data." Then, clearly labeled as general knowledge, share relevant general context. Never claim to have performed live web research.`,
   };
 
   const extraInstruction = specialInstructions[category] || `Supplement the local investor profile with careful analysis. Do not contradict any local data field.`;
+
+  const knownLocallyBlock =
+    knownLocally && knownLocally.length > 0
+      ? `\nALREADY CONFIRMED FROM LOCAL DATA (treat as ground truth, do not contradict, weave in naturally rather than repeating verbatim):\n${knownLocally.map((a) => `- ${a}`).join("\n")}\n`
+      : "";
 
   return `
 You are Signal's Investor Intelligence Agent. Help a startup founder understand ONE specific investor and make a better outreach decision.
@@ -247,7 +300,7 @@ GROUNDING RULES:
 - Match scores are indicators, not absolute truth.
 - Be specific to this startup-investor pair; avoid generic fundraising advice.
 - Do not claim web research was performed.
-
+${knownLocallyBlock}
 ${extraInstruction}
 
 STARTUP:
@@ -285,23 +338,23 @@ Answer directly, clearly, and practically.
 }
 
 /* ============================================================================
- * STEP 9 - SOURCE LABEL FOR GEMINI-ROUTED ANSWERS
+ * STEP 5 - SOURCE LABEL FOR AI-ROUTED ANSWERS
  * ==========================================================================*/
 function sourceForCategory(category) {
   if (category === CATEGORY.GENERAL_KNOWLEDGE) return SOURCE.GENERAL_KNOWLEDGE;
   if (category === CATEGORY.RECENT_NEWS) return SOURCE.GENERAL_KNOWLEDGE;
-  if (category === CATEGORY.COMPARISON) return SOURCE.PROFILE_PLUS_AI;
   return SOURCE.PROFILE_PLUS_AI;
 }
 
 /* ============================================================================
- * STEP 10 - GRACEFUL GEMINI FALLBACK
- * Builds a useful answer purely from local data when Gemini is unavailable.
+ * STEP 6 - GRACEFUL FULL-STACK FALLBACK
+ * Builds a useful answer purely from local data when BOTH Gemini and the
+ * Groq fallback are unavailable.
  * ==========================================================================*/
 function buildFallbackAnswer(investor, startup, match) {
   const inv = investor || {};
   const m = match || {};
-  const parts = ["I couldn't retrieve additional AI insights at the moment. Here is what is available from the investor profile:"];
+  const parts = ["I couldn't reach any AI provider just now. Here is what is available from the investor profile:"];
 
   if (inv.sectors) parts.push(`- Sectors: ${inv.sectors}`);
   if (inv.stages) parts.push(`- Stage(s): ${inv.stages}`);
@@ -317,18 +370,82 @@ function buildFallbackAnswer(investor, startup, match) {
   return parts.join("\n");
 }
 
-async function callGeminiSafely(prompt) {
+/* ============================================================================
+ * STEP 7 - AI CALL WITH AUTOMATIC PROVIDER FALLBACK
+ * Tries Gemini first (with its own internal retry/backoff). If Gemini is
+ * unavailable for any reason - daily quota exhausted, timeout, 5xx, invalid
+ * response - automatically retries the exact same prompt against Groq
+ * before giving up. Groq is a deliberately different vendor/infrastructure
+ * from Gemini, so a Google-side outage or quota exhaustion can't take out
+ * the fallback too. This is what stops users from seeing the degraded
+ * "couldn't retrieve AI insights" message during normal Gemini outages/quota
+ * exhaustion.
+ * ==========================================================================*/
+async function callAIWithFallback(prompt) {
   try {
     const result = await callGemini(prompt, null, 4, "text");
     if (!result?.trim()) {
       throw new Error("Gemini returned an empty response.");
     }
-    return { ok: true, text: result.trim() };
-  } catch (error) {
-    // Covers timeouts, 429/503, invalid API responses, and empty content.
-    console.error("Gemini call failed:", error?.message || error);
-    return { ok: false, error };
+    return { ok: true, text: result.trim(), provider: "gemini" };
+  } catch (geminiError) {
+    console.error("Gemini call failed:", geminiError?.message || geminiError);
+    console.warn("Falling back to Groq...");
+
+    try {
+      const fallbackText = await callGroq(prompt);
+      return { ok: true, text: fallbackText.trim(), provider: "groq-fallback" };
+    } catch (groqError) {
+      console.error("Groq fallback also failed:", groqError?.message || groqError);
+      return { ok: false, error: groqError };
+    }
   }
+}
+
+/* ============================================================================
+ * STEP 8 - RESPONSE CACHE
+ * In-memory cache for AI-routed answers, keyed by investor + normalized
+ * question. Only used for the FIRST question about an investor in a thread
+ * (messages.length === 0) - follow-up questions depend on conversation
+ * context and must not be served from a cache keyed only on the question
+ * text. This cuts repeat-question AI/quota usage (e.g. multiple founders,
+ * or one founder re-asking, "what's their thesis?" about the same investor)
+ * to zero after the first call.
+ *
+ * NOTE: this is per-server-process memory. It resets on redeploy/restart
+ * and is NOT shared across serverless instances (e.g. on Vercel). For
+ * cross-instance persistence, swap this for Vercel KV or similar - the
+ * get/set functions below are the only two spots that would need to change.
+ * ==========================================================================*/
+const AI_ANSWER_CACHE = new Map();
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_MAX_ENTRIES = 200;
+
+function cacheKey(investorId, question) {
+  return `${investorId}::${question.trim().toLowerCase().replace(/\s+/g, " ")}`;
+}
+
+function getCached(key) {
+  const entry = AI_ANSWER_CACHE.get(key);
+  if (!entry) return null;
+
+  if (Date.now() > entry.expiresAt) {
+    AI_ANSWER_CACHE.delete(key);
+    return null;
+  }
+
+  // Touch for simple LRU-ish recency ordering.
+  AI_ANSWER_CACHE.delete(key);
+  AI_ANSWER_CACHE.set(key, entry);
+  return entry;
+}
+
+function setCached(key, value) {
+  if (AI_ANSWER_CACHE.size >= CACHE_MAX_ENTRIES) {
+    const oldestKey = AI_ANSWER_CACHE.keys().next().value;
+    AI_ANSWER_CACHE.delete(oldestKey);
+  }
+  AI_ANSWER_CACHE.set(key, { ...value, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 /* ============================================================================
@@ -342,32 +459,71 @@ export async function POST(req) {
       return Response.json({ error: "Startup, investor, and question are required." }, { status: 400 });
     }
 
-    // STEP 1 - classify the question
-    const category = classifyQuestion(question);
+    // STEP 1 - classify the question (all matching intents, not just one)
+    const categories = classifyQuestions(question);
+    const needsAI = categories.some((c) => AI_REQUIRED_CATEGORIES.has(c));
 
-    // STEP 2 - try to answer from local data first
-    const localResult = answerFromInvestorData(investor, startup, match, enrichment, question, category);
+    // STEP 2 - try to answer each matched category from local data
+    const localAnswers = categories
+      .map((cat) => ({ cat, result: answerFromInvestorData(investor, startup, match, enrichment, question, cat) }))
+      .filter((la) => la.result.answered);
 
-    // STEP 3 - short-circuit if local data was enough
-    if (localResult.answered) {
+    // STEP 3 - short-circuit ONLY if every matched category is local-only
+    // (no outreach/comparison/general-knowledge/news mixed in) AND every one
+    // of them actually resolved. Otherwise we fall through to the AI so the
+    // answer reads as one coherent response instead of a partial patchwork.
+    const allNonAICategoriesAnswered =
+      !needsAI && categories.every((cat) => localAnswers.some((la) => la.cat === cat));
+
+    if (allNonAICategoriesAnswered && localAnswers.length > 0) {
+      const combinedText = localAnswers.map((la) => la.result.answer).join("\n\n");
       return Response.json({
-        answer: localResult.answer,
-        source: localResult.source,
+        answer: combinedText,
+        source: localAnswers.length > 1 ? SOURCE.PROFILE : localAnswers[0].result.source,
         investorId: investor.id,
         investorName: investor.name,
       });
     }
 
+    const category = primaryCategory(categories);
+
+    // STEP 4 - cache lookup (first question about this investor only)
+    const key = messages.length === 0 ? cacheKey(investor.id, question) : null;
+
+    if (key) {
+      const cached = getCached(key);
+      if (cached) {
+        return Response.json({
+          answer: cached.answer,
+          source: cached.source,
+          investorId: investor.id,
+          investorName: investor.name,
+          cached: true,
+        });
+      }
+    }
+
     // STEP 5 - build conversation context for follow-up questions
     const conversation = buildConversationContext(messages);
 
-    // STEP 4/6/7/8 - build the grounded Gemini prompt for this category
-    const prompt = buildGeminiPrompt({ startup, investor, match, enrichment, conversation, question, category });
+    // STEP 6 - build the grounded AI prompt, passing along anything already
+    // confirmed locally so the model doesn't have to re-derive it (and
+    // can't accidentally contradict it).
+    const prompt = buildAIPrompt({
+      startup,
+      investor,
+      match,
+      enrichment,
+      conversation,
+      question,
+      category,
+      knownLocally: localAnswers.map((la) => la.result.answer),
+    });
 
-    // STEP 10 - call Gemini with graceful degradation
-    const geminiResult = await callGeminiSafely(prompt);
+    // STEP 7 - call the AI with automatic Gemini -> Groq fallback
+    const aiResult = await callAIWithFallback(prompt);
 
-    if (!geminiResult.ok) {
+    if (!aiResult.ok) {
       return Response.json({
         answer: buildFallbackAnswer(investor, startup, match),
         source: SOURCE.PROFILE,
@@ -376,11 +532,18 @@ export async function POST(req) {
       });
     }
 
+    const responseSource = sourceForCategory(category);
+
+    if (key) {
+      setCached(key, { answer: aiResult.text, source: responseSource });
+    }
+
     return Response.json({
-      answer: geminiResult.text,
-      source: sourceForCategory(category),
+      answer: aiResult.text,
+      source: responseSource,
       investorId: investor.id,
       investorName: investor.name,
+      provider: aiResult.provider,
     });
   } catch (error) {
     console.error("Investor Agent API error:", error);
