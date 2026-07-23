@@ -6,9 +6,8 @@ import InvestorAgent from "./InvestorAgent";
 
 const PAGE_SIZE = 20;
 
-export default function MatchDashboard({ startup, investors, selected, setSelected, enrichment, setEnrichment, canContinue, onContinue }) {
+export default function MatchDashboard({ startup, investors, selected, setSelected, enrichment, canContinue, onContinue }) {
   const [filters, setFilters] = useState({ minScore: 0, sector: "", stage: "", geo: "" });
-  const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [expanded, setExpanded] = useState({});
   const [agentTarget, setAgentTarget] = useState(null);
@@ -32,22 +31,6 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
   const visible = filtered.slice(0, visibleCount);
   const toggleExpand = (id) => setExpanded((e) => ({ ...e, [id]: !e[id] }));
 
-  const enrichTop = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/enrich", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ startup, matches: filtered.slice(0, 10).map(({ inv, m }) => ({ inv, subs: m.subs })) }),
-      });
-      const data = await res.json();
-      if (data.enrichment) setEnrichment((prev) => ({ ...prev, ...data.enrichment }));
-    } catch (e) {
-      /* leave local scores as fallback */
-    }
-    setLoading(false);
-  };
-
   const toggleSelect = (id) => setSelected((s) => ({ ...s, [id]: !s[id] }));
 
   return (
@@ -59,7 +42,6 @@ export default function MatchDashboard({ startup, investors, selected, setSelect
         <Field label="Sector contains"><input value={filters.sector} onChange={(e) => setFilters({ ...filters, sector: e.target.value })} /></Field>
         <Field label="Stage contains"><input value={filters.stage} onChange={(e) => setFilters({ ...filters, stage: e.target.value })} /></Field>
         <Field label="Geography contains"><input value={filters.geo} onChange={(e) => setFilters({ ...filters, geo: e.target.value })} /></Field>
-        <button className="btn btn-ai" onClick={enrichTop} disabled={loading}>{loading ? "Enriching…" : "✦ Enrich top 10 with AI rationale"}</button>
       </div>
 
       <div style={{ color: "var(--muted)", fontSize: 13, margin: "4px 0 12px" }}>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import StartupForm from "../components/StartupForm";
 import InvestorImport from "../components/InvestorImport";
 import MatchDashboard from "../components/MatchDashboard";
@@ -15,6 +15,16 @@ export default function Page() {
   const [enrichment, setEnrichment] = useState({});
   const [emails, setEmails] = useState({});
   const [history, setHistory] = useState([]);
+
+  // The color variables (--surface, --text, etc.) are declared at :root
+  // and only overridden by the .dark/.light class. That class needs to
+  // live on <html> (not just an inner wrapper div) or the page background
+  // and any element outside the wrapper never picks up the new theme.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(theme);
+  }, [theme]);
 
   const canStep3 = !!startup.name && investors.length > 0;
   const selectedInvestors = investors.filter((i) => selected[i.id]);
@@ -63,7 +73,6 @@ export default function Page() {
             selected={selected}
             setSelected={setSelected}
             enrichment={enrichment}
-            setEnrichment={setEnrichment}
             canContinue={canStep4}
             onContinue={() => setStep(4)}
           />
